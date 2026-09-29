@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myRole() {
+      return get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myRole() == 'admin';
+    }
+
+    function isValidUser() {
+      return isSignedIn() && (myRole() == 'admin' || myRole() == 'lectura');
+    }
+
+    // Cada usuario puede leer su propio documento de rol; el admin puede
+    // leer y administrar todos. Los documentos de usuario SOLO los crea/edita
+    // un admin (o se crea manualmente el primero desde la consola de Firebase).
+    match /usuarios/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Cualquier usuario válido (admin o lectura) puede leer los espacios de
+    // trabajo (IDS / MESA). Solo un admin puede escribir en ellos.
+    match /workspaces/{id} {
+      allow read: if isValidUser();
+      allow write: if isAdmin();
+    }
+  }
+}

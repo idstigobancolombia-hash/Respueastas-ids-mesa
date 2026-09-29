@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visor de Análisis y Justificación de Alertas — IDS / MESA</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+    <div id="loginBox">
+        <h1>🔐 Visor SOC — Acceso</h1>
+        <p class="subtitle">Ingresa con tu correo y contraseña</p>
+        <input type="email" id="loginEmail" placeholder="Correo" autocomplete="username">
+        <input type="password" id="loginPass" placeholder="Contraseña" autocomplete="current-password">
+        <button id="loginBtn" onclick="doLogin()">Iniciar sesión</button>
+        <div id="loginError"></div>
+    </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appShell" class="hidden">
+
+<header>
+    <div class="title-block">
+        <div>Visor de Análisis y Justificación de Alertas</div>
+        <div class="subtitle">Centro de respuestas SOC • IDS • Darktrace</div>
+    </div>
+    <div class="header-actions">
+        <button id="editToggleBtn" onclick="toggleEditMode()" class="hidden-role" data-admin-only>✏️ Modo edición</button>
+        <button id="seedBtn" onclick="seedIDS()" class="hidden-role" data-admin-only>🌱 Cargar contenido inicial IDS</button>
+        <button id="exportBtn" onclick="exportBackup()" class="hidden-role" data-admin-only>⬇️ Exportar copia (JSON)</button>
+    </div>
+</header>
+
+<div id="topbar">
+    <div id="workspaceSwitcher">
+        <button id="wsIdsBtn" class="ws-btn" onclick="switchWorkspace('ids')">🛡️ IDS</button>
+        <button id="wsMesaBtn" class="ws-btn" onclick="switchWorkspace('mesa')">🗒️ MESA</button>
+    </div>
+    <div id="userInfo">
+        <span id="userEmail"></span>
+        <span id="userRoleBadge" class="role-badge"></span>
+        <button id="logoutBtn" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+</div>
+
+<div class="search-container">
+    <input type="text" id="searchInput" placeholder="🔍 Buscar respuesta en todas las pestañas..." oninput="filterButtons()">
+    <button id="clearSearch" onclick="resetSearch()">🏠</button>
+</div>
+
+<div id="ipLookupPanel">
+    <div id="ipLookupBox">
+        <div class="ip-lookup-title collapsed-title" onclick="togglePanel('ipLookup')">
+            <span id="ipLookupChevron" class="panel-chevron">▶</span>
+            🌐 Buscador de direccionamiento IP (Banco SDLAN)
+        </div>
+        <div id="ipLookupContent" class="panel-content collapsed">
+            <div class="ip-lookup-row">
+                <input type="text" id="ipLookupInput" placeholder="Ej: 10.134.0.10  ·  10.140.128 (3 octetos)  ·  10.140.0.0/24" autocomplete="off">
+                <button id="ipLookupBtn" onclick="lookupIP()">Buscar</button>
+                <button id="ipLookupClear" onclick="clearIPLookup()">Limpiar</button>
+            </div>
+            <div class="ip-hint">Puedes escribir 1 a 4 octetos (ej: <b>10.140.128</b> trae todo ese bloque), una IP completa, o una IP con /prefijo.</div>
+            <div id="ipLookupResults"></div>
+        </div>
+    </div>
+</div>
+
+<div id="registroPanel">
+    <div id="registroBox">
+        <div class="ip-lookup-title collapsed-title" onclick="togglePanel('registro')">
+            <span id="registroChevron" class="panel-chevron">▶</span>
+            📌 Registro de IP / MAC de casos e investigaciones
+        </div>
+        <div id="registroContent" class="panel-content collapsed">
+            <div class="registro-form hidden-role" id="registroForm" data-admin-only>
+                <select id="regTipo">
+                    <option value="ip">IP</option>
+                    <option value="mac">MAC</option>
+                </select>
+                <input type="text" id="regValor" class="reg-valor" placeholder="Ej: 10.140.5.20 ó 00:1A:2B:3C:4D:5E">
+                <input type="text" id="regCaso" class="reg-caso" placeholder="Caso / referencia (ej: INC-2026-045)">
+                <textarea id="regNota" class="reg-nota" placeholder="Nota u observación (opcional)"></textarea>
+                <button id="registroAddBtn" onclick="addRegistro()">+ Agregar al registro</button>
+            </div>
+            <input type="text" id="registroFilter" placeholder="🔍 Filtrar registro por IP, MAC, caso o nota..." oninput="renderRegistro()">
+            <div id="registroList" class="registro-list"></div>
+        </div>
+    </div>
+</div>
+
+<div id="usersPanel" class="hidden-role" data-admin-only>
+    <div id="usersBox">
+        <div class="ip-lookup-title collapsed-title" onclick="togglePanel('users')">
+            <span id="usersChevron" class="panel-chevron">▶</span>
+            👤 Gestión de usuarios (solo administradores)
+        </div>
+        <div id="usersContent" class="panel-content collapsed">
+            <div class="users-form">
+                <input type="email" id="uEmail" class="u-email" placeholder="Correo del nuevo usuario">
+                <input type="text" id="uPass" class="u-pass" placeholder="Contraseña (mín. 6 caracteres)">
+                <select id="uRol">
+                    <option value="lectura">Solo lectura</option>
+                    <option value="admin">Administrador</option>
+                </select>
+                <button id="usersAddBtn" onclick="addUsuario()">+ Crear usuario</button>
+            </div>
+            <div id="usersList" class="users-list"></div>
+        </div>
+    </div>
+</div>
+
+<div id="viewer" class="hidden"></div>
+
+<div id="menu">
+<div id="tabsNav"></div>
+<div class="container" id="tabsContainer"></div>
+</div>
+
+<div id="modalOverlay" class="hidden">
+    <div class="modal">
+        <h3 id="modalTitle">Editar botón</h3>
+
+        <label for="modalLabel">Nombre del botón</label>
+        <input type="text" id="modalLabel" placeholder="Ej: SMB Enumeration">
+
+        <label for="modalType">Tipo</label>
+        <select id="modalType" onchange="onModalTypeChange()">
+            <option value="text">Respuesta de texto (se abre en esta misma página)</option>
+            <option value="link">Enlace a archivo (PDF / imagen)</option>
+        </select>
+
+        <div id="modalTextField">
+            <label for="modalContent">Contenido de la respuesta</label>
+            <textarea id="modalContent" placeholder="Escribe aquí el texto de la respuesta..."></textarea>
+        </div>
+
+        <div id="modalLinkField" style="display: none;">
+            <label for="modalUrl">Ruta del archivo</label>
+            <input type="text" id="modalUrl" placeholder="Ej: Manuales/archivo.pdf">
+            <div class="modal-hint">Ruta relativa (o URL completa) al archivo. Súbelo tú mismo al repositorio o a un enlace externo.</div>
+        </div>
+
+        <div class="modal-actions">
+            <button id="modalCancelBtn" onclick="closeModal()">Cancelar</button>
+            <button id="modalSaveBtn" onclick="saveModal()">Guardar</button>
+        </div>
+    </div>
+</div>
+
+<div class="sync-note" id="syncNote"></div>
+
+</div><!-- /appShell -->
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="ip-data.js"></script>
+<script src="seed-ids.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
