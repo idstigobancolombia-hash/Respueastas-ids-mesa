@@ -318,7 +318,7 @@ header .subtitle{
 }
 
 .hidden{
-    display:none;
+    display:none !important;
 }
 
 /* ===== BOTÓN REGRESAR / COPIAR ===== */
@@ -807,11 +807,13 @@ header .subtitle{
 
 /* ===================== LOGIN ===================== */
 #loginScreen{
-    min-height:100vh;
+    box-sizing:border-box;
+    height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
     padding:20px;
+    overflow:hidden;
 }
 
 #loginBox{
@@ -1058,11 +1060,13 @@ header .subtitle{
 
 /* ===================== SELECCIÓN DE ÁREA ===================== */
 #chooserScreen{
-    min-height:100vh;
+    box-sizing:border-box;
+    height:100vh;
     display:flex;
     align-items:center;
     justify-content:center;
     padding:20px;
+    overflow:hidden;
 }
 
 #chooserBox{

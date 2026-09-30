@@ -138,6 +138,8 @@ function switchWorkspace(name){
 
     unsubscribeWorkspace = db.collection('workspaces').doc(name)
         .onSnapshot(snap => {
+            const docMissing = !snap.exists;
+
             if (snap.exists && snap.data().dataJson){
                 try {
                     DATA = JSON.parse(snap.data().dataJson);
@@ -149,6 +151,18 @@ function switchWorkspace(name){
             }
             if (!DATA.tabs) DATA.tabs = [];
             if (!DATA.registro) DATA.registro = [];
+
+            // Primera vez que existe este espacio: si es "ids", se autocompleta con
+            // todo el contenido original de respuestas3 (sin necesidad de botón).
+            if (docMissing && name === 'ids' && isAdmin()){
+                DATA = JSON.parse(JSON.stringify(SEED_IDS));
+                if (!DATA.registro) DATA.registro = [];
+                currentTab = DATA.tabs.length ? DATA.tabs[0].id : null;
+                renderApp();
+                renderRegistro();
+                saveWorkspace();
+                return;
+            }
 
             if (currentTab !== '__busquedas__' && (!currentTab || !DATA.tabs.find(t => t.id === currentTab))){
                 currentTab = DATA.tabs.length ? DATA.tabs[0].id : null;
