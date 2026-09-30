@@ -20,6 +20,26 @@
     </div>
 </div>
 
+<!-- ===================== SELECCIÓN DE ÁREA ===================== -->
+<div id="chooserScreen" class="hidden">
+    <div id="chooserBox">
+        <h1>¿Con cuál área quieres trabajar?</h1>
+        <p class="subtitle">Puedes cambiar de área en cualquier momento con el botón "Cambiar de área"</p>
+        <div id="chooserCards">
+            <button class="chooser-card" onclick="chooseWorkspace('ids')">
+                <span class="chooser-icon">🛡️</span>
+                <span class="chooser-label">IDS</span>
+                <span class="chooser-desc">Brechas Darktrace, comandos y respuestas, manuales</span>
+            </button>
+            <button class="chooser-card" onclick="chooseWorkspace('mesa')">
+                <span class="chooser-icon">🗒️</span>
+                <span class="chooser-label">MESA SOPORTE</span>
+                <span class="chooser-desc">Espacio para el contenido de mesa de dinero</span>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ===================== APP ===================== -->
 <div id="appShell" class="hidden">
 
@@ -29,6 +49,7 @@
         <div class="subtitle">Centro de respuestas SOC • IDS • Darktrace</div>
     </div>
     <div class="header-actions">
+        <button id="changeAreaBtn" onclick="backToChooser()">🔄 Cambiar de área</button>
         <button id="editToggleBtn" onclick="toggleEditMode()" class="hidden-role" data-admin-only>✏️ Modo edición</button>
         <button id="seedBtn" onclick="seedIDS()" class="hidden-role" data-admin-only>🌱 Cargar contenido inicial IDS</button>
         <button id="exportBtn" onclick="exportBackup()" class="hidden-role" data-admin-only>⬇️ Exportar copia (JSON)</button>
@@ -36,10 +57,7 @@
 </header>
 
 <div id="topbar">
-    <div id="workspaceSwitcher">
-        <button id="wsIdsBtn" class="ws-btn" onclick="switchWorkspace('ids')">🛡️ IDS</button>
-        <button id="wsMesaBtn" class="ws-btn" onclick="switchWorkspace('mesa')">🗒️ MESA</button>
-    </div>
+    <div id="currentAreaLabel"></div>
     <div id="userInfo">
         <span id="userEmail"></span>
         <span id="userRoleBadge" class="role-badge"></span>
@@ -50,47 +68,6 @@
 <div class="search-container">
     <input type="text" id="searchInput" placeholder="🔍 Buscar respuesta en todas las pestañas..." oninput="filterButtons()">
     <button id="clearSearch" onclick="resetSearch()">🏠</button>
-</div>
-
-<div id="ipLookupPanel">
-    <div id="ipLookupBox">
-        <div class="ip-lookup-title collapsed-title" onclick="togglePanel('ipLookup')">
-            <span id="ipLookupChevron" class="panel-chevron">▶</span>
-            🌐 Buscador de direccionamiento IP (Banco SDLAN)
-        </div>
-        <div id="ipLookupContent" class="panel-content collapsed">
-            <div class="ip-lookup-row">
-                <input type="text" id="ipLookupInput" placeholder="Ej: 10.134.0.10  ·  10.140.128 (3 octetos)  ·  10.140.0.0/24" autocomplete="off">
-                <button id="ipLookupBtn" onclick="lookupIP()">Buscar</button>
-                <button id="ipLookupClear" onclick="clearIPLookup()">Limpiar</button>
-            </div>
-            <div class="ip-hint">Puedes escribir 1 a 4 octetos (ej: <b>10.140.128</b> trae todo ese bloque), una IP completa, o una IP con /prefijo.</div>
-            <div id="ipLookupResults"></div>
-        </div>
-    </div>
-</div>
-
-<div id="registroPanel">
-    <div id="registroBox">
-        <div class="ip-lookup-title collapsed-title" onclick="togglePanel('registro')">
-            <span id="registroChevron" class="panel-chevron">▶</span>
-            📌 Registro de IP / MAC de casos e investigaciones
-        </div>
-        <div id="registroContent" class="panel-content collapsed">
-            <div class="registro-form hidden-role" id="registroForm" data-admin-only>
-                <select id="regTipo">
-                    <option value="ip">IP</option>
-                    <option value="mac">MAC</option>
-                </select>
-                <input type="text" id="regValor" class="reg-valor" placeholder="Ej: 10.140.5.20 ó 00:1A:2B:3C:4D:5E">
-                <input type="text" id="regCaso" class="reg-caso" placeholder="Caso / referencia (ej: INC-2026-045)">
-                <textarea id="regNota" class="reg-nota" placeholder="Nota u observación (opcional)"></textarea>
-                <button id="registroAddBtn" onclick="addRegistro()">+ Agregar al registro</button>
-            </div>
-            <input type="text" id="registroFilter" placeholder="🔍 Filtrar registro por IP, MAC, caso o nota..." oninput="renderRegistro()">
-            <div id="registroList" class="registro-list"></div>
-        </div>
-    </div>
 </div>
 
 <div id="usersPanel" class="hidden-role" data-admin-only>
@@ -119,6 +96,41 @@
 <div id="menu">
 <div id="tabsNav"></div>
 <div class="container" id="tabsContainer"></div>
+
+<div id="busquedasPane" class="busquedas-pane">
+    <div class="container">
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">🌐 Buscador de direccionamiento IP (Banco SDLAN)</h2>
+            </div>
+            <div class="ip-lookup-row">
+                <input type="text" id="ipLookupInput" placeholder="Ej: 10.134.0.10  ·  10.140.128 (3 octetos)  ·  10.140.0.0/24" autocomplete="off">
+                <button id="ipLookupBtn" onclick="lookupIP()">Buscar</button>
+                <button id="ipLookupClear" onclick="clearIPLookup()">Limpiar</button>
+            </div>
+            <div class="ip-hint">Puedes escribir 1 a 4 octetos (ej: <b>10.140.128</b> trae todo ese bloque), una IP completa, o una IP con /prefijo.</div>
+            <div id="ipLookupResults"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title">📌 Registro de IP / MAC de casos e investigaciones</h2>
+            </div>
+            <div class="registro-form hidden-role" id="registroForm" data-admin-only>
+                <select id="regTipo">
+                    <option value="ip">IP</option>
+                    <option value="mac">MAC</option>
+                </select>
+                <input type="text" id="regValor" class="reg-valor" placeholder="Ej: 10.140.5.20 ó 00:1A:2B:3C:4D:5E">
+                <input type="text" id="regCaso" class="reg-caso" placeholder="Caso / referencia (ej: INC-2026-045)">
+                <textarea id="regNota" class="reg-nota" placeholder="Nota u observación (opcional)"></textarea>
+                <button id="registroAddBtn" onclick="addRegistro()">+ Agregar al registro</button>
+            </div>
+            <input type="text" id="registroFilter" placeholder="🔍 Filtrar registro por IP, MAC, caso o nota..." oninput="renderRegistro()">
+            <div id="registroList" class="registro-list"></div>
+        </div>
+    </div>
+</div>
 </div>
 
 <div id="modalOverlay" class="hidden">

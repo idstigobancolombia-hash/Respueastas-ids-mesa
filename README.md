@@ -11,6 +11,13 @@ Versión web del visor de respuestas, ahora con:
 
 No incluye archivos adjuntos (PDF/imágenes) físicos: para esos botones tipo "enlace", usa una URL (puede ser un archivo que subas al mismo repositorio de GitHub, o un enlace externo tipo Google Drive/SharePoint).
 
+**Flujo de pantallas:**
+1. **Login** (correo y contraseña).
+2. **Elegir área**: una pantalla con dos botones grandes, "🛡️ IDS" o "🗒️ MESA SOPORTE".
+3. **Menús**: la pantalla principal con las pestañas de esa área. La búsqueda de IP y el registro de casos/MAC ahora son una pestaña más, llamada "🔎 Búsquedas", igual que las demás.
+
+Para volver a elegir área usa el botón "🔄 Cambiar de área" arriba a la derecha.
+
 ---
 
 ## 1. Crear el proyecto de Firebase (una sola vez)

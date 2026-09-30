@@ -104,15 +104,31 @@ auth.onAuthStateChanged(async (user) => {
 
     if (isAdmin()) subscribeUsuarios();
 
-    switchWorkspace(currentWorkspace);
+    document.getElementById('appShell').classList.add('hidden');
+    document.getElementById('chooserScreen').classList.remove('hidden');
 });
+
+/* ===================== SELECCIÓN DE ÁREA ===================== */
+
+const AREA_LABELS = { ids: '🛡️ IDS', mesa: '🗒️ MESA SOPORTE' };
+
+function chooseWorkspace(name){
+    document.getElementById('chooserScreen').classList.add('hidden');
+    document.getElementById('appShell').classList.remove('hidden');
+    switchWorkspace(name);
+}
+
+function backToChooser(){
+    if (unsubscribeWorkspace) { unsubscribeWorkspace(); unsubscribeWorkspace = null; }
+    document.getElementById('appShell').classList.add('hidden');
+    document.getElementById('chooserScreen').classList.remove('hidden');
+}
 
 /* ===================== WORKSPACES (IDS / MESA) ===================== */
 
 function switchWorkspace(name){
     currentWorkspace = name;
-    document.getElementById('wsIdsBtn').classList.toggle('active', name === 'ids');
-    document.getElementById('wsMesaBtn').classList.toggle('active', name === 'mesa');
+    document.getElementById('currentAreaLabel').textContent = AREA_LABELS[name] || name;
 
     document.getElementById('searchInput').value = '';
     document.getElementById('viewer').classList.add('hidden');
@@ -134,7 +150,7 @@ function switchWorkspace(name){
             if (!DATA.tabs) DATA.tabs = [];
             if (!DATA.registro) DATA.registro = [];
 
-            if (!currentTab || !DATA.tabs.find(t => t.id === currentTab)){
+            if (currentTab !== '__busquedas__' && (!currentTab || !DATA.tabs.find(t => t.id === currentTab))){
                 currentTab = DATA.tabs.length ? DATA.tabs[0].id : null;
             }
 
@@ -367,13 +383,23 @@ function renderTabsNav(){
         addBtn.onclick = addTab;
         nav.appendChild(addBtn);
     }
+
+    const busquedasWrap = document.createElement('div');
+    busquedasWrap.className = 'tab-btn-wrap' + (currentTab === '__busquedas__' ? ' active' : '');
+    const busquedasBtn = document.createElement('button');
+    busquedasBtn.className = 'tab-btn';
+    busquedasBtn.textContent = '🔎 Búsquedas';
+    busquedasBtn.onclick = () => switchTab('__busquedas__');
+    busquedasWrap.appendChild(busquedasBtn);
+    nav.appendChild(busquedasWrap);
 }
 
 function renderTabsContent(){
     const container = document.getElementById('tabsContainer');
     container.innerHTML = '';
+    document.getElementById('busquedasPane').classList.toggle('active-tab', currentTab === '__busquedas__');
 
-    if (DATA.tabs.length === 0){
+    if (DATA.tabs.length === 0 && currentTab !== '__busquedas__'){
         const empty = document.createElement('div');
         empty.className = 'tab-content active-tab';
         empty.innerHTML = '<div class="section"><div class="section-header"><h2 class="section-title">' +
