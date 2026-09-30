@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visor de Análisis y Justificación de Alertas — IDS / MESA</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -116,6 +117,19 @@
 
         <div class="section">
             <div class="section-header">
+                <h2 class="section-title">🧩 Buscador de VLANs</h2>
+            </div>
+            <div class="ip-lookup-row">
+                <input type="text" id="vlanInput" placeholder="Ej: 3070, wifi, registro, atm..." autocomplete="off">
+                <button id="vlanBtn" onclick="searchVlan()">Buscar</button>
+                <button id="vlanClear" onclick="clearVlan()">Limpiar</button>
+            </div>
+            <div class="ip-hint">Busca por número de VLAN o por parte del nombre (ej: <b>3070</b> o <b>registro</b>).</div>
+            <div id="vlanResults"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-header">
                 <h2 class="section-title">📌 Registro de IP / MAC de casos e investigaciones</h2>
             </div>
             <div class="registro-form hidden-role" id="registroForm" data-admin-only>
@@ -128,8 +142,9 @@
                 <textarea id="regNota" class="reg-nota" placeholder="Nota u observación (opcional)"></textarea>
                 <button id="registroAddBtn" onclick="addRegistro()">+ Agregar al registro</button>
             </div>
-            <input type="text" id="registroFilter" placeholder="🔍 Filtrar registro por IP, MAC, caso o nota..." oninput="renderRegistro()">
-            <div id="registroList" class="registro-list"></div>
+            <input type="text" id="registroFilter" placeholder="🔍 Filtrar registro por IP, MAC, caso o nota..." oninput="onRegistroFilterInput()">
+            <button id="registroToggleBtn" onclick="toggleRegistroList()">👁️ Mostrar registros guardados</button>
+            <div id="registroList" class="registro-list hidden"></div>
         </div>
     </div>
 </div>

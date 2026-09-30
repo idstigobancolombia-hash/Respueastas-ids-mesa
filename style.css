@@ -223,8 +223,8 @@ header .subtitle{
 
 .button-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-    gap:18px;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:10px;
 }
 
 .button-edit-wrap{
@@ -236,13 +236,13 @@ header .subtitle{
     background:#111827;
     border:1px solid #1f2937;
     color:#e5e7eb;
-    padding:18px;
-    border-radius:12px;
+    padding:11px 14px;
+    border-radius:10px;
     text-align:left;
-    font-size:14px;
+    font-size:13px;
     font-weight:600;
     cursor:pointer;
-    min-height:70px;
+    min-height:42px;
     transition:.2s;
 }
 
@@ -1221,4 +1221,22 @@ header .subtitle{
 
 #moreActionsMenu button:hover{
     background:#1f2937;
+}
+
+/* ===================== BOTÓN "VER REGISTROS" ===================== */
+#registroToggleBtn{
+    background:#1f2937;
+    color:#e5e7eb;
+    border:1px solid #374151;
+    border-radius:10px;
+    padding:10px 16px;
+    font-weight:700;
+    cursor:pointer;
+    font-size:13px;
+    margin-bottom:12px;
+}
+
+#registroToggleBtn:hover{
+    border-color:#f4a62a;
+    color:#f4a62a;
 }

@@ -131,6 +131,7 @@ function switchWorkspace(name){
     document.getElementById('currentAreaLabel').textContent = AREA_LABELS[name] || name;
 
     document.getElementById('searchInput').value = '';
+    document.getElementById('tabsNav').classList.remove('hidden');
     document.getElementById('viewer').classList.add('hidden');
     document.getElementById('menu').classList.remove('menu-hidden');
 
@@ -626,6 +627,7 @@ function copyViewerContent(button){
 function switchTab(tabId){
     currentTab = tabId;
     document.getElementById('searchInput').value = '';
+    document.getElementById('tabsNav').classList.remove('hidden');
     renderApp();
 }
 
@@ -1187,6 +1189,76 @@ document.getElementById('ipLookupInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') lookupIP();
 });
 
+/* ===================== BUSCADOR DE VLANs ===================== */
+
+const VLAN_DATA = [
+    { id: '1',    name: 'DEFAULT_VLAN' },
+    { id: '1000', name: 'TUNNELED_NODE_SERVER_RESERVED' },
+    { id: '2010', name: 'SEG_FISICA_INTRUSION_OLD' },
+    { id: '2120', name: 'ATM_OLD' },
+    { id: '3000', name: 'SEG_FISICA_VIDEO' },
+    { id: '3010', name: 'SEG_FISICA_INTRUSION' },
+    { id: '3020', name: 'ATOMATISMO' },
+    { id: '3030', name: 'IOT' },
+    { id: '3040', name: 'MGMT_CYBER' },
+    { id: '3050', name: 'VLAN3050' },
+    { id: '3055', name: 'VLAN3055' },
+    { id: '3060', name: 'MGMT_WLAN' },
+    { id: '3061', name: 'MGMT_LAN' },
+    { id: '3070', name: 'REGISTRO' },
+    { id: '3080', name: 'AISLAMIENTO' },
+    { id: '3090', name: 'TELEFONIA' },
+    { id: '3099', name: 'VIDEOCONFERENCIA' },
+    { id: '3100', name: 'IMPRESION' },
+    { id: '3110', name: 'TRANSACCIONALES' },
+    { id: '3120', name: 'ATM' },
+    { id: '3130', name: 'USUARIOS_CORPORATIVO' },
+    { id: '3175', name: 'USUARIOS_BCMOBILE' },
+    { id: '3176', name: 'BCWORK' },
+    { id: '3180', name: 'USUARIOS_WIFIBC' },
+    { id: '3200', name: 'VALIDADORAS' },
+    { id: '3300', name: 'SPAN_IDS' },
+    { id: '4094', name: 'ZTP_WLAN' },
+    { id: '3177', name: 'vlan de presidencia' }
+];
+
+function searchVlan(){
+    const raw = document.getElementById('vlanInput').value.trim().toLowerCase();
+    const out = document.getElementById('vlanResults');
+
+    if (!raw){
+        out.innerHTML = '';
+        return;
+    }
+
+    const matches = VLAN_DATA.filter(v =>
+        v.id.toLowerCase().includes(raw) || v.name.toLowerCase().includes(raw)
+    );
+
+    if (matches.length === 0){
+        out.innerHTML = '<div class="ip-notfound">❌ No hay ninguna VLAN que coincida con <b>' + escapeHTML(raw) + '</b>.</div>';
+        return;
+    }
+
+    out.innerHTML = '<div class="ip-range-count">' + matches.length + ' resultado(s)</div>' +
+        '<div class="ip-range-list">' + matches.map(v =>
+            '<div class="ip-hier-item">' +
+                '<span class="ip-hier-badge">VLAN ' + escapeHTML(v.id) + '</span>' +
+                '<span class="ip-hier-label">' + escapeHTML(v.name) + '</span>' +
+            '</div>'
+        ).join('') + '</div>';
+}
+
+function clearVlan(){
+    document.getElementById('vlanInput').value = '';
+    document.getElementById('vlanResults').innerHTML = '';
+    document.getElementById('vlanInput').focus();
+}
+
+document.getElementById('vlanInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') searchVlan();
+});
+
 document.getElementById('loginPass').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') doLogin();
 });
@@ -1241,9 +1313,31 @@ function deleteRegistro(id){
     saveWorkspace();
 }
 
+let registroListVisible = false;
+
+function toggleRegistroList(){
+    registroListVisible = !registroListVisible;
+    const list = document.getElementById('registroList');
+    const btn = document.getElementById('registroToggleBtn');
+    list.classList.toggle('hidden', !registroListVisible);
+    btn.textContent = registroListVisible ? '🙈 Ocultar registros guardados' : '👁️ Mostrar registros guardados';
+    if (registroListVisible) renderRegistro();
+}
+
+function onRegistroFilterInput(){
+    const filter = document.getElementById('registroFilter').value.trim();
+    if (filter && !registroListVisible){
+        registroListVisible = true;
+        document.getElementById('registroList').classList.remove('hidden');
+        document.getElementById('registroToggleBtn').textContent = '🙈 Ocultar registros guardados';
+    }
+    renderRegistro();
+}
+
 function renderRegistro(){
     const list = document.getElementById('registroList');
     if (!list) return;
+    if (!registroListVisible) return;
     const filterEl = document.getElementById('registroFilter');
     const filter = (filterEl ? filterEl.value : '').toLowerCase().trim();
 
