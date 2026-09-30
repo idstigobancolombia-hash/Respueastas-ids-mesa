@@ -961,20 +961,7 @@ header .subtitle{
     display:none !important;
 }
 
-/* ===================== PANEL DE USUARIOS (ADMIN) ===================== */
-#usersPanel{
-    max-width:1400px;
-    margin:16px auto 0 auto;
-    padding:0 40px;
-}
-
-#usersBox{
-    background:#0f141d;
-    border:1px solid #1f2937;
-    border-radius:12px;
-    padding:20px 22px;
-}
-
+/* ===================== USUARIOS (modal, admin) ===================== */
 .users-form{
     display:flex;
     gap:10px;
@@ -1191,4 +1178,47 @@ header .subtitle{
     font-weight:700;
     cursor:pointer;
     font-size:14px;
+}
+
+/* ===================== MENÚ "MÁS ACCIONES" (⋯) ===================== */
+.header-actions{
+    position:relative;
+}
+
+#moreActionsBtn{
+    font-size:18px;
+    font-weight:700;
+    padding:9px 14px;
+}
+
+#moreActionsMenu{
+    position:absolute;
+    top:100%;
+    right:0;
+    margin-top:6px;
+    background:#0f141d;
+    border:1px solid #243041;
+    border-radius:10px;
+    padding:8px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    min-width:230px;
+    z-index:50;
+    box-shadow:0 8px 24px rgba(0,0,0,.4);
+}
+
+#moreActionsMenu button{
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:#e5e7eb;
+    padding:9px 10px;
+    border-radius:7px;
+    cursor:pointer;
+    font-size:13px;
+}
+
+#moreActionsMenu button:hover{
+    background:#1f2937;
 }

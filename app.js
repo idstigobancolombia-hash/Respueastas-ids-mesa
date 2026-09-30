@@ -237,6 +237,28 @@ function exportBackup(){
 
 /* ===================== GESTIÓN DE USUARIOS (ADMIN) ===================== */
 
+function openUsersModal(){
+    if (!isAdmin()) return;
+    document.getElementById('usersModalOverlay').classList.remove('hidden');
+    document.getElementById('moreActionsMenu').classList.add('hidden');
+}
+
+function closeUsersModal(){
+    document.getElementById('usersModalOverlay').classList.add('hidden');
+}
+
+function toggleMoreActions(){
+    document.getElementById('moreActionsMenu').classList.toggle('hidden');
+}
+
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('moreActionsMenu');
+    const btn = document.getElementById('moreActionsBtn');
+    if (!menu || menu.classList.contains('hidden')) return;
+    if (e.target === btn || menu.contains(e.target)) return;
+    menu.classList.add('hidden');
+});
+
 function subscribeUsuarios(){
     if (unsubscribeUsuarios) unsubscribeUsuarios();
     unsubscribeUsuarios = db.collection('usuarios').onSnapshot(snap => {

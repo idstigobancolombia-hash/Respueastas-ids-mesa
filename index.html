@@ -51,8 +51,12 @@
     <div class="header-actions">
         <button id="changeAreaBtn" onclick="backToChooser()">🔄 Cambiar de área</button>
         <button id="editToggleBtn" onclick="toggleEditMode()" class="hidden-role" data-admin-only>✏️ Modo edición</button>
-        <button id="seedBtn" onclick="seedIDS()" class="hidden-role" data-admin-only>🌱 Cargar contenido inicial IDS</button>
-        <button id="exportBtn" onclick="exportBackup()" class="hidden-role" data-admin-only>⬇️ Exportar copia (JSON)</button>
+        <button id="usersOpenBtn" onclick="openUsersModal()" class="hidden-role" data-admin-only>👤 Usuarios</button>
+        <button id="moreActionsBtn" onclick="toggleMoreActions()" class="hidden-role" data-admin-only>⋯</button>
+        <div id="moreActionsMenu" class="hidden">
+            <button id="seedBtn" onclick="seedIDS()">🌱 Cargar contenido inicial IDS</button>
+            <button id="exportBtn" onclick="exportBackup()">⬇️ Exportar copia (JSON)</button>
+        </div>
     </div>
 </header>
 
@@ -70,23 +74,21 @@
     <button id="clearSearch" onclick="resetSearch()">🏠</button>
 </div>
 
-<div id="usersPanel" class="hidden-role" data-admin-only>
-    <div id="usersBox">
-        <div class="ip-lookup-title collapsed-title" onclick="togglePanel('users')">
-            <span id="usersChevron" class="panel-chevron">▶</span>
-            👤 Gestión de usuarios (solo administradores)
+<div id="usersModalOverlay" class="hidden">
+    <div class="modal">
+        <h3>👤 Gestión de usuarios</h3>
+        <div class="users-form">
+            <input type="email" id="uEmail" class="u-email" placeholder="Correo del nuevo usuario">
+            <input type="text" id="uPass" class="u-pass" placeholder="Contraseña (mín. 6 caracteres)">
+            <select id="uRol">
+                <option value="lectura">Solo lectura</option>
+                <option value="admin">Administrador</option>
+            </select>
+            <button id="usersAddBtn" onclick="addUsuario()">+ Crear</button>
         </div>
-        <div id="usersContent" class="panel-content collapsed">
-            <div class="users-form">
-                <input type="email" id="uEmail" class="u-email" placeholder="Correo del nuevo usuario">
-                <input type="text" id="uPass" class="u-pass" placeholder="Contraseña (mín. 6 caracteres)">
-                <select id="uRol">
-                    <option value="lectura">Solo lectura</option>
-                    <option value="admin">Administrador</option>
-                </select>
-                <button id="usersAddBtn" onclick="addUsuario()">+ Crear usuario</button>
-            </div>
-            <div id="usersList" class="users-list"></div>
+        <div id="usersList" class="users-list"></div>
+        <div class="modal-actions">
+            <button id="usersCloseBtn" onclick="closeUsersModal()">Cerrar</button>
         </div>
     </div>
 </div>
