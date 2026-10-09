@@ -6,6 +6,19 @@
 <title>Visor de Análisis y Justificación de Alertas — IDS / MESA</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
 <link rel="stylesheet" href="style.css">
+<style>
+/* estilos de lo nuevo (v1.40) */
+.version-badge{display:inline-block;font-size:11px;font-weight:700;color:#9ca3af;background:#111827;border:1px solid #374151;border-radius:20px;padding:3px 10px;margin-left:10px;vertical-align:middle;}
+.ip-status{margin:10px 0 6px;padding:10px 14px;border-radius:10px;font-size:13.5px;border:1px solid #243041;background:#0f141d;color:#cbd5e1;}
+.ip-status:empty{display:none;}
+.ip-status.found{border-color:#16a34a;background:rgba(22,163,74,.10);color:#bbf7d0;}
+.ip-status.notfound{border-color:#dc2626;background:rgba(220,38,38,.10);color:#fecaca;}
+.ip-status.error{border-color:#f59e0b;background:rgba(245,158,11,.10);color:#fde68a;}
+mark{background:#f4a62a;color:#111;border-radius:3px;padding:0 2px;}
+.registro-count{font-size:12.5px;color:#9ca3af;margin:8px 2px;}
+.registro-search-label{font-size:13px;font-weight:700;color:#f4a62a;margin:14px 0 6px;}
+#registroFilter{font-size:16px;padding:14px 18px;}
+</style>
 </head>
 <body>
 
@@ -46,7 +59,7 @@
 
 <header>
     <div class="title-block">
-        <div>Visor de Análisis y Justificación de Alertas</div>
+        <div>Visor de Análisis y Justificación de Alertas <span id="versionBadge" class="version-badge">v1.40</span></div>
         <div class="subtitle">Centro de respuestas SOC • IDS • Darktrace</div>
     </div>
     <div class="header-actions">
@@ -102,7 +115,7 @@
 
 <div id="busquedasPane" class="busquedas-pane">
     <div class="container">
-        <div class="section">
+        <div class="section" id="ipLookupBox">
             <div class="section-header">
                 <h2 class="section-title">🌐 Buscador de direccionamiento IP (Banco SDLAN)</h2>
             </div>
@@ -111,7 +124,8 @@
                 <button id="ipLookupBtn" onclick="lookupIP()">Buscar</button>
                 <button id="ipLookupClear" onclick="clearIPLookup()">Limpiar</button>
             </div>
-            <div class="ip-hint">Puedes escribir 1 a 4 octetos (ej: <b>10.140.128</b> trae todo ese bloque), una IP completa, o una IP con /prefijo.</div>
+            <div class="ip-hint">Puedes escribir 1 a 4 octetos (ej: <b>10.140.128</b> trae todo ese bloque), una IP completa, una IP con /prefijo, una MAC en cualquier formato, o una palabra (busca en el registro de casos y en las VLANs).</div>
+            <div id="ipLookupStatus" class="ip-status"></div>
             <div id="ipLookupResults"></div>
         </div>
 
@@ -137,12 +151,14 @@
                     <option value="ip">IP</option>
                     <option value="mac">MAC</option>
                 </select>
-                <input type="text" id="regValor" class="reg-valor" placeholder="Ej: 10.140.5.20 ó 00:1A:2B:3C:4D:5E">
+                <input type="text" id="regValor" class="reg-valor" placeholder="Ej: 10.140  ·  10.140.5.20  ·  00:1A:2B:3C:4D:5E">
                 <input type="text" id="regCaso" class="reg-caso" placeholder="Caso / referencia (ej: INC-2026-045)">
                 <textarea id="regNota" class="reg-nota" placeholder="Nota u observación (opcional)"></textarea>
                 <button id="registroAddBtn" onclick="addRegistro()">+ Agregar al registro</button>
             </div>
-            <input type="text" id="registroFilter" placeholder="🔍 Filtrar registro por IP, MAC, caso o nota..." oninput="onRegistroFilterInput()">
+            <div class="ip-hint">Todos los campos son opcionales (basta una nota, una IP o una MAC). IP: mínimo 2 octetos. MAC: en cualquier formato; se guarda siempre igual.</div>
+            <div class="registro-search-label">🔎 Buscar en el registro (frase, IP, MAC, caso o comentario)</div>
+            <input type="text" id="registroFilter" placeholder="Ej: 191.156  ·  puerto 3389  ·  001a2b  ·  INC000001045819" oninput="onRegistroFilterInput()" autocomplete="off">
             <button id="registroToggleBtn" onclick="toggleRegistroList()">👁️ Mostrar registros guardados</button>
             <div id="registroList" class="registro-list hidden"></div>
         </div>

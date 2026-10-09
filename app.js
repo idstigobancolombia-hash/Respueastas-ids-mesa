@@ -643,9 +643,10 @@ function filterButtons(){
     }
 
     tabsNav.classList.add('hidden');
+    document.getElementById('busquedasPane').classList.remove('active-tab');
     document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('active-tab'));
 
-    document.querySelectorAll('.section').forEach(section => {
+    document.querySelectorAll('#tabsContainer .section').forEach(section => {
         let anyVisible = false;
         section.querySelectorAll('.action-btn').forEach(btn => {
             const match = btn.textContent.toLowerCase().includes(search);
@@ -661,6 +662,10 @@ function resetSearch(){
     document.getElementById('tabsNav').classList.remove('hidden');
     document.getElementById('viewer').classList.add('hidden');
     document.getElementById('menu').classList.remove('menu-hidden');
+    // la búsqueda general oculta secciones con style.display: se restauran TODAS
+    // (incluidas las del panel de Búsquedas) para que no quede la pestaña vacía
+    document.querySelectorAll('.section').forEach(s => { s.style.display = ''; });
+    document.querySelectorAll('.button-edit-wrap').forEach(b => { b.style.display = ''; });
     renderApp();
 }
 
@@ -894,6 +899,66 @@ function normalizeMac(m){
     return m.trim().toUpperCase().replace(/-/g, ':');
 }
 
+/* --- MAC en cualquier formato: 00:1A:.. / 00-1A-.. / 001A.2B3C.4D5E / 001A2B3C4D5E --- */
+function macBareHex(raw){
+    return (raw || '').toString().toUpperCase().replace(/[^0-9A-F]/g, '');
+}
+function normalizeMacFull(raw){
+    const hex = macBareHex(raw);
+    if (hex.length !== 12) return null;
+    return hex.match(/.{2}/g).join(':');
+}
+function looksLikeMacQuery(raw){
+    if (/[:\-.]/.test(raw)){
+        const bare = macBareHex(raw);
+        return bare.length >= 2 && bare.length <= 12;
+    }
+    if (/^[0-9A-Fa-f]+$/.test(raw)){
+        return /[A-Fa-f]/.test(raw) || raw.length >= 6;
+    }
+    return false;
+}
+/* --- IP para el registro: desde 2 hasta 4 octetos --- */
+function isValidPartialIp(raw){
+    const parts = (raw || '').trim().split('.');
+    if (parts.length < 2 || parts.length > 4) return false;
+    for (const p of parts){
+        if (!/^\d{1,3}$/.test(p)) return false;
+        if (parseInt(p, 10) > 255) return false;
+    }
+    return true;
+}
+/* --- texto sin tildes ni mayúsculas, para buscar por frase --- */
+function normText(s){
+    return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+/* --- ¿este registro coincide con lo escrito? (frase, IP parcial, MAC, comentario) --- */
+function regMatches(r, rawQuery){
+    const q = normText(rawQuery).trim();
+    if (!q) return true;
+    const words = q.split(/\s+/).filter(Boolean);
+    const blob = normText([r.valor, r.caso, r.nota].filter(Boolean).join(' ')) +
+                 ' ' + (r.valor || '').toLowerCase().replace(/[^0-9a-z]/g, '');
+    return words.every(w => {
+        if (blob.includes(w)) return true;
+        const bare = w.replace(/[^0-9a-z]/g, '');
+        return bare.length > 0 && blob.includes(bare);
+    });
+}
+function highlightText(text, rawQuery){
+    let out = escapeHTML(text);
+    const words = (rawQuery || '').trim().split(/\s+/).filter(w => w.length > 0);
+    words.forEach(w => {
+        const esc = escapeHTML(w).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        try { out = out.replace(new RegExp('(' + esc + ')', 'gi'), '<mark>$1</mark>'); } catch(e){}
+    });
+    return out;
+}
+/* el cuadro del buscador de IP puede no existir en el HTML: nunca debe romper la búsqueda */
+function ipBoxEl(){
+    return document.getElementById('ipLookupBox') || document.createElement('div');
+}
+
 function parseIpQuery(raw){
     let s = raw.trim();
     let explicitPrefix = null;
@@ -1015,12 +1080,12 @@ function findRangeMatches(qStart, qEnd){
     });
 
     (DATA.registro || []).forEach(r => {
-        if (r.tipo !== 'ip') return;
-        const ip = ipToInt(r.valor);
-        if (ip === null) return;
-        if (ip >= qStart && ip <= qEnd){
+        if (r.tipo !== 'ip' || !r.valor) return;
+        const range = parseIpQuery(r.valor);
+        if (!range) return;
+        if (overlaps(range.qStart, range.qEnd, qStart, qEnd)){
             results.push({ tipo: 'caso', badge: 'CASO / INVESTIGACIÓN', label: r.caso || '(sin caso)',
-                sheetLabel: r.nota || null, start: ip, end: ip, cidr: r.valor, fecha: r.fecha });
+                sheetLabel: r.nota || null, start: range.qStart, end: range.qEnd, cidr: r.valor, fecha: r.fecha });
         }
     });
 
@@ -1028,43 +1093,98 @@ function findRangeMatches(qStart, qEnd){
     return results;
 }
 
+function setIpStatus(kind, html){
+    const el = document.getElementById('ipLookupStatus');
+    if (!el) return;
+    el.className = 'ip-status' + (kind ? ' ' + kind : '');
+    el.innerHTML = html || '';
+}
+
 function lookupIP(){
     const raw = document.getElementById('ipLookupInput').value.trim();
-    const box = document.getElementById('ipLookupBox');
+    const box = ipBoxEl();
     const out = document.getElementById('ipLookupResults');
     box.classList.remove('match-found', 'match-notfound');
 
     if (!raw){
         out.innerHTML = '';
+        setIpStatus('', '');
         return;
     }
 
-    const looksLikeMac = (raw.indexOf(':') !== -1 || raw.indexOf('-') !== -1) && MAC_PREFIX_RE.test(raw);
-    if (looksLikeMac){
-        renderMacResults(raw);
-        return;
-    }
-
+    let interpretacion = '';
     const parsed = parseIpQuery(raw);
-    if (parsed === null){
-        box.classList.add('match-notfound');
-        out.innerHTML = '<div class="ip-error">⚠️ Escribe una IPv4 (completa o con 1-3 octetos), un bloque con /prefijo, o una MAC (ej: 00:1A:2B:3C:4D:5E).</div>';
+
+    try {
+        if (parsed !== null){
+            if (parsed.exact){
+                interpretacion = 'IP exacta ' + intToIp(parsed.qStart);
+                lookupExactIP(parsed.qStart);
+            } else {
+                interpretacion = 'bloque ' + intToIp(parsed.qStart) + ' – ' + intToIp(parsed.qEnd);
+                renderRangeResults(parsed.qStart, parsed.qEnd);
+            }
+        } else if (looksLikeMacQuery(raw)){
+            interpretacion = 'MAC ' + (macBareHex(raw).match(/.{1,2}/g) || []).join(':');
+            renderMacResults(raw);
+        } else {
+            interpretacion = 'texto (registro de casos y VLANs)';
+            renderTextResults(raw);
+        }
+    } catch (err){
+        out.innerHTML = '<div class="ip-error">⚠️ Error al buscar: ' + escapeHTML(err.message) + '</div>';
+        setIpStatus('error', '⚠️ Ocurrió un error al buscar "' + escapeHTML(raw) + '".');
         return;
     }
 
-    if (parsed.exact){
-        lookupExactIP(parsed.qStart);
+    const notFound = !!out.querySelector('.ip-notfound');
+    const count = out.querySelectorAll('.ip-result-best, .ip-hier-item').length;
+    if (notFound || count === 0){
+        setIpStatus('notfound', '❌ <b>' + escapeHTML(raw) + '</b> (' + escapeHTML(interpretacion) + ') <b>NO está</b> en el direccionamiento ni en el registro de casos.');
     } else {
-        renderRangeResults(parsed.qStart, parsed.qEnd);
+        setIpStatus('found', '✅ Encontrado: <b>' + count + '</b> resultado(s) para <b>' + escapeHTML(raw) + '</b> (' + escapeHTML(interpretacion) + ').');
     }
 }
 
+function renderTextResults(raw){
+    const box = ipBoxEl();
+    const out = document.getElementById('ipLookupResults');
+    const casos = (DATA.registro || []).filter(r => regMatches(r, raw));
+    const q = normText(raw);
+    const vlans = (typeof VLAN_DATA !== 'undefined' ? VLAN_DATA : []).filter(v =>
+        normText(v.id).includes(q) || normText(v.name).includes(q));
+
+    if (casos.length === 0 && vlans.length === 0){
+        box.classList.add('match-notfound');
+        out.innerHTML = '<div class="ip-notfound">❌ No hay nada que coincida con <b>' + escapeHTML(raw) + '</b>.</div>';
+        return;
+    }
+    box.classList.add('match-found');
+    let html = '<div class="ip-range-list">';
+    casos.forEach(r => {
+        html += '<div class="ip-hier-item" style="border-color:#f4a62a;">' +
+            '<span class="ip-hier-badge" style="color:#f4a62a;">' + (r.valor ? (r.tipo === 'mac' ? 'MAC' : 'IP') : 'NOTA') + '</span>' +
+            '<span class="ip-hier-label">' + highlightText([r.valor, r.caso, r.nota].filter(Boolean).join(' · '), raw) +
+                (r.fecha ? ' <span style="color:#6b7280;">(' + escapeHTML(r.fecha) + ')</span>' : '') + '</span>' +
+            '<span class="ip-hier-cidr">REGISTRO</span></div>';
+    });
+    vlans.forEach(v => {
+        html += '<div class="ip-hier-item"><span class="ip-hier-badge">VLAN ' + escapeHTML(v.id) + '</span>' +
+            '<span class="ip-hier-label">' + escapeHTML(v.name) + '</span></div>';
+    });
+    out.innerHTML = html + '</div>';
+}
+
 function lookupExactIP(ipInt){
-    const box = document.getElementById('ipLookupBox');
+    const box = ipBoxEl();
     const out = document.getElementById('ipLookupResults');
 
     const matches = findIPMatches(ipInt);
-    const casos = (DATA.registro || []).filter(r => r.tipo === 'ip' && ipToInt(r.valor) === ipInt);
+    const casos = (DATA.registro || []).filter(r => {
+        if (r.tipo !== 'ip' || !r.valor) return false;
+        const range = parseIpQuery(r.valor);
+        return range && ipInt >= range.qStart && ipInt <= range.qEnd;
+    });
 
     if (matches.length === 0 && casos.length === 0){
         box.classList.add('match-notfound');
@@ -1114,7 +1234,7 @@ function lookupExactIP(ipInt){
 }
 
 function renderRangeResults(qStart, qEnd){
-    const box = document.getElementById('ipLookupBox');
+    const box = ipBoxEl();
     const out = document.getElementById('ipLookupResults');
 
     const matches = findRangeMatches(qStart, qEnd);
@@ -1146,13 +1266,13 @@ function renderRangeResults(qStart, qEnd){
 }
 
 function renderMacResults(raw){
-    const box = document.getElementById('ipLookupBox');
+    const box = ipBoxEl();
     const out = document.getElementById('ipLookupResults');
-    const q = normalizeMac(raw);
+    const q = macBareHex(raw);
 
-    const all = (DATA.registro || []).filter(r => r.tipo === 'mac');
+    const all = (DATA.registro || []).filter(r => r.tipo === 'mac' && r.valor);
     const matches = all.filter(r => {
-        const v = normalizeMac(r.valor);
+        const v = macBareHex(r.valor);
         return v === q || v.indexOf(q) === 0;
     });
 
@@ -1181,7 +1301,7 @@ function renderMacResults(raw){
 function clearIPLookup(){
     document.getElementById('ipLookupInput').value = '';
     document.getElementById('ipLookupResults').innerHTML = '';
-    document.getElementById('ipLookupBox').classList.remove('match-found', 'match-notfound');
+    ipBoxEl().classList.remove('match-found', 'match-notfound');
     document.getElementById('ipLookupInput').focus();
 }
 
@@ -1272,23 +1392,26 @@ function addRegistro(){
     const caso = document.getElementById('regCaso').value.trim();
     const nota = document.getElementById('regNota').value.trim();
 
-    if (!valorRaw){
-        alert('Escribe la IP o MAC.');
+    if (!valorRaw && !caso && !nota){
+        alert('Escribe al menos una IP/MAC, un caso o una nota.');
         return;
     }
 
     let valor = valorRaw;
-    if (tipo === 'ip'){
-        if (ipToInt(valorRaw) === null){
-            alert('La IP no es válida. Ej: 10.140.5.20');
-            return;
+    if (valorRaw){
+        if (tipo === 'ip'){
+            if (!isValidPartialIp(valorRaw)){
+                alert('Escribe al menos 2 octetos de la IP. Ej: 10.140  ·  10.140.5  ·  10.140.5.20');
+                return;
+            }
+        } else {
+            const macFull = normalizeMacFull(valorRaw);
+            if (macFull === null){
+                alert('La MAC no es válida. Escríbela completa en cualquier formato: 00:1A:2B:3C:4D:5E, 00-1A-2B-3C-4D-5E, 001A.2B3C.4D5E ó 001A2B3C4D5E.');
+                return;
+            }
+            valor = macFull;
         }
-    } else {
-        if (!MAC_RE.test(valorRaw)){
-            alert('La MAC no es válida. Ej: 00:1A:2B:3C:4D:5E');
-            return;
-        }
-        valor = normalizeMac(valorRaw);
     }
 
     const fecha = new Date().toISOString().slice(0, 10);
@@ -1307,7 +1430,7 @@ function deleteRegistro(id){
     if (!isAdmin()) return;
     const item = DATA.registro.find(r => r.id === id);
     if (!item) return;
-    if (!confirm('¿Eliminar el registro "' + (item.caso || item.valor) + '"?')) return;
+    if (!confirm('¿Eliminar el registro "' + (item.caso || item.valor || item.nota) + '"?')) return;
     DATA.registro = DATA.registro.filter(r => r.id !== id);
     renderRegistro();
     saveWorkspace();
@@ -1339,31 +1462,28 @@ function renderRegistro(){
     if (!list) return;
     if (!registroListVisible) return;
     const filterEl = document.getElementById('registroFilter');
-    const filter = (filterEl ? filterEl.value : '').toLowerCase().trim();
+    const filterRaw = (filterEl ? filterEl.value : '').trim();
 
-    let items = DATA.registro || [];
-    if (filter){
-        items = items.filter(r =>
-            (r.valor || '').toLowerCase().includes(filter) ||
-            (r.caso || '').toLowerCase().includes(filter) ||
-            (r.nota || '').toLowerCase().includes(filter)
-        );
-    }
-
+    const all = DATA.registro || [];
+    let items = filterRaw ? all.filter(r => regMatches(r, filterRaw)) : all.slice();
     items = items.slice().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
 
+    const header = '<div class="registro-count">' +
+        (filterRaw ? ('🔎 ' + items.length + ' de ' + all.length + ' registro(s) coinciden con <b>' + escapeHTML(filterRaw) + '</b>')
+                   : ('📚 ' + all.length + ' registro(s) guardado(s)')) + '</div>';
+
     if (items.length === 0){
-        list.innerHTML = '<div class="registro-empty">Sin registros' + (filter ? ' que coincidan con el filtro.' : ' todavía.') + '</div>';
+        list.innerHTML = header + '<div class="registro-empty">' + (filterRaw ? '❌ Nada coincide con lo que escribiste.' : 'Sin registros todavía.') + '</div>';
         return;
     }
 
-    list.innerHTML = items.map(r => (
+    list.innerHTML = header + items.map(r => (
         '<div class="registro-item">' +
-            '<span class="reg-badge">' + (r.tipo === 'ip' ? 'IP' : 'MAC') + '</span>' +
+            '<span class="reg-badge">' + (r.valor ? (r.tipo === 'ip' ? 'IP' : 'MAC') : 'NOTA') + '</span>' +
             '<div class="reg-body">' +
-                '<div class="reg-valor">' + escapeHTML(r.valor) + '</div>' +
-                (r.caso ? '<div class="reg-caso">' + escapeHTML(r.caso) + '</div>' : '') +
-                (r.nota ? '<div class="reg-nota">' + escapeHTML(r.nota) + '</div>' : '') +
+                (r.valor ? '<div class="reg-valor">' + highlightText(r.valor, filterRaw) + '</div>' : '') +
+                (r.caso ? '<div class="reg-caso">' + highlightText(r.caso, filterRaw) + '</div>' : '') +
+                (r.nota ? '<div class="reg-nota">' + highlightText(r.nota, filterRaw) + '</div>' : '') +
                 '<div class="reg-fecha">' + escapeHTML(r.fecha || '') + '</div>' +
             '</div>' +
             (isAdmin() ? '<button class="reg-del" title="Eliminar" onclick="deleteRegistro(\'' + r.id + '\')">🗑</button>' : '') +
