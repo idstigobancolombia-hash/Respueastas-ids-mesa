@@ -7,7 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
 <link rel="stylesheet" href="style.css">
 <style>
-/* estilos de lo nuevo (v1.40) */
+/* estilos de lo nuevo (v1.50) */
 .version-badge{display:inline-block;font-size:11px;font-weight:700;color:#9ca3af;background:#111827;border:1px solid #374151;border-radius:20px;padding:3px 10px;margin-left:10px;vertical-align:middle;}
 .ip-status{margin:10px 0 6px;padding:10px 14px;border-radius:10px;font-size:13.5px;border:1px solid #243041;background:#0f141d;color:#cbd5e1;}
 .ip-status:empty{display:none;}
@@ -59,7 +59,7 @@ mark{background:#f4a62a;color:#111;border-radius:3px;padding:0 2px;}
 
 <header>
     <div class="title-block">
-        <div>Visor de Análisis y Justificación de Alertas <span id="versionBadge" class="version-badge">v1.40</span></div>
+        <div>Visor de Análisis y Justificación de Alertas <span id="versionBadge" class="version-badge">v1.50</span></div>
         <div class="subtitle">Centro de respuestas SOC • IDS • Darktrace</div>
     </div>
     <div class="header-actions">
@@ -150,15 +150,16 @@ mark{background:#f4a62a;color:#111;border-radius:3px;padding:0 2px;}
                 <select id="regTipo">
                     <option value="ip">IP</option>
                     <option value="mac">MAC</option>
+                    <option value="otro">Otro (host, usuario, teléfono…)</option>
                 </select>
-                <input type="text" id="regValor" class="reg-valor" placeholder="Ej: 10.140  ·  10.140.5.20  ·  00:1A:2B:3C:4D:5E">
+                <input type="text" id="regValor" class="reg-valor" placeholder="Dato: IP, MAC, host, usuario, teléfono, lo que sea">
                 <input type="text" id="regCaso" class="reg-caso" placeholder="Caso / referencia (ej: INC-2026-045)">
                 <textarea id="regNota" class="reg-nota" placeholder="Nota u observación (opcional)"></textarea>
                 <button id="registroAddBtn" onclick="addRegistro()">+ Agregar al registro</button>
             </div>
-            <div class="ip-hint">Todos los campos son opcionales (basta una nota, una IP o una MAC). IP: mínimo 2 octetos. MAC: en cualquier formato; se guarda siempre igual.</div>
+            <div class="ip-hint">Todos los campos son opcionales y el dato puede ser cualquier cosa (host, usuario, teléfono…). Si eliges IP o MAC y el formato es válido, se normaliza (IP desde 2 octetos; MAC en cualquier formato); si no, se guarda tal cual. Se busca por cualquier fracción.</div>
             <div class="registro-search-label">🔎 Buscar en el registro (frase, IP, MAC, caso o comentario)</div>
-            <input type="text" id="registroFilter" placeholder="Ej: 191.156  ·  puerto 3389  ·  001a2b  ·  INC000001045819" oninput="onRegistroFilterInput()" autocomplete="off">
+            <input type="text" id="registroFilter" placeholder="Cualquier fracción: 191.156  ·  puerto 3389  ·  001a2b  ·  srv-bd  ·  300123" oninput="onRegistroFilterInput()" autocomplete="off">
             <button id="registroToggleBtn" onclick="toggleRegistroList()">👁️ Mostrar registros guardados</button>
             <div id="registroList" class="registro-list hidden"></div>
         </div>

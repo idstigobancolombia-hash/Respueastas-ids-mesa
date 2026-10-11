@@ -929,6 +929,10 @@ function isValidPartialIp(raw){
     return true;
 }
 /* --- texto sin tildes ni mayúsculas, para buscar por frase --- */
+function tipoLabel(r){
+    if (!r.valor) return 'NOTA';
+    return r.tipo === 'ip' ? 'IP' : (r.tipo === 'mac' ? 'MAC' : 'DATO');
+}
 function normText(s){
     return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
@@ -1137,7 +1141,13 @@ function lookupIP(){
         return;
     }
 
-    const notFound = !!out.querySelector('.ip-notfound');
+    let notFound = !!out.querySelector('.ip-notfound');
+    if (notFound && interpretacion.indexOf('texto') === -1 && (DATA.registro || []).some(r => regMatches(r, raw))){
+        interpretacion = 'texto en el registro de casos';
+        box.classList.remove('match-notfound');
+        renderTextResults(raw);
+        notFound = !!out.querySelector('.ip-notfound');
+    }
     const count = out.querySelectorAll('.ip-result-best, .ip-hier-item').length;
     if (notFound || count === 0){
         setIpStatus('notfound', '❌ <b>' + escapeHTML(raw) + '</b> (' + escapeHTML(interpretacion) + ') <b>NO está</b> en el direccionamiento ni en el registro de casos.');
@@ -1163,7 +1173,7 @@ function renderTextResults(raw){
     let html = '<div class="ip-range-list">';
     casos.forEach(r => {
         html += '<div class="ip-hier-item" style="border-color:#f4a62a;">' +
-            '<span class="ip-hier-badge" style="color:#f4a62a;">' + (r.valor ? (r.tipo === 'mac' ? 'MAC' : 'IP') : 'NOTA') + '</span>' +
+            '<span class="ip-hier-badge" style="color:#f4a62a;">' + tipoLabel(r) + '</span>' +
             '<span class="ip-hier-label">' + highlightText([r.valor, r.caso, r.nota].filter(Boolean).join(' · '), raw) +
                 (r.fecha ? ' <span style="color:#6b7280;">(' + escapeHTML(r.fecha) + ')</span>' : '') + '</span>' +
             '<span class="ip-hier-cidr">REGISTRO</span></div>';
@@ -1393,30 +1403,33 @@ function addRegistro(){
     const nota = document.getElementById('regNota').value.trim();
 
     if (!valorRaw && !caso && !nota){
-        alert('Escribe al menos una IP/MAC, un caso o una nota.');
+        alert('Escribe al menos un dato, un caso o una nota.');
         return;
     }
 
+    // Validación blanda: si lo escrito tiene formato de IP/MAC se normaliza;
+    // si no, se guarda tal cual como dato libre (host, usuario, teléfono, etc.)
     let valor = valorRaw;
+    let tipoFinal = tipo;
     if (valorRaw){
-        if (tipo === 'ip'){
-            if (!isValidPartialIp(valorRaw)){
-                alert('Escribe al menos 2 octetos de la IP. Ej: 10.140  ·  10.140.5  ·  10.140.5.20');
-                return;
+        if (tipo === 'ip' && isValidPartialIp(valorRaw)){
+            tipoFinal = 'ip';
+        } else if (tipo === 'mac' && normalizeMacFull(valorRaw) !== null){
+            valor = normalizeMacFull(valorRaw);
+            tipoFinal = 'mac';
+        } else if (tipo === 'otro'){
+            tipoFinal = 'otro';
+            if (normalizeMacFull(valorRaw) !== null && /[:\-.]/.test(valorRaw) === false && /^[0-9A-Fa-f]{12}$/.test(valorRaw) && /[A-Fa-f]/.test(valorRaw)){
+                valor = normalizeMacFull(valorRaw); tipoFinal = 'mac';
             }
         } else {
-            const macFull = normalizeMacFull(valorRaw);
-            if (macFull === null){
-                alert('La MAC no es válida. Escríbela completa en cualquier formato: 00:1A:2B:3C:4D:5E, 00-1A-2B-3C-4D-5E, 001A.2B3C.4D5E ó 001A2B3C4D5E.');
-                return;
-            }
-            valor = macFull;
+            tipoFinal = 'otro';   // no cumple el formato elegido: se guarda igual como texto libre
         }
     }
 
     const fecha = new Date().toISOString().slice(0, 10);
     if (!DATA.registro) DATA.registro = [];
-    DATA.registro.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), tipo, valor, caso, nota, fecha });
+    DATA.registro.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 7), tipo: tipoFinal, valor, caso, nota, fecha });
 
     document.getElementById('regValor').value = '';
     document.getElementById('regCaso').value = '';
@@ -1479,7 +1492,7 @@ function renderRegistro(){
 
     list.innerHTML = header + items.map(r => (
         '<div class="registro-item">' +
-            '<span class="reg-badge">' + (r.valor ? (r.tipo === 'ip' ? 'IP' : 'MAC') : 'NOTA') + '</span>' +
+            '<span class="reg-badge">' + tipoLabel(r) + '</span>' +
             '<div class="reg-body">' +
                 (r.valor ? '<div class="reg-valor">' + highlightText(r.valor, filterRaw) + '</div>' : '') +
                 (r.caso ? '<div class="reg-caso">' + highlightText(r.caso, filterRaw) + '</div>' : '') +
